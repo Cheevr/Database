@@ -1,0 +1,39 @@
+{
+  "name": "cheevr-database",
+  "version": "1.0.0",
+  "description": "A database utililty to facilitate accessing Elasticsearch",
+  "private": true,
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Cheevr/Database.git"
+  },
+  "keywords": [
+    "elasticsearch",
+    "cache",
+    "mapping",
+    "database"
+  ],
+  "author": "Ravi Gairola <ravi@cheevr.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/Cheevr/Database/issues"
+  },
+  "scripts": {
+    "start": "type node-dev 2> /dev/null && node-dev . || node .",
+    "test": "istanbul cover _mocha -- --recursive"
+  },
+  "devDependencies": {
+    "chai": "^3",
+    "express": "^4",
+    "istanbul": "^0.4",
+    "mocha": "^3"
+  },
+  "dependencies": {
+    "async": "^2",
+    "cheevr-config": "https://github.com/Cheevr/Config.git",
+    "cheevr-logging": "https://github.com/Cheevr/Logging.git",
+    "elasticsearch": "^12",
+    "moment": "^2"
+  }
+}

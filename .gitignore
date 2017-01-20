@@ -1,0 +1,6 @@
+bower_modules/
+node_modules/
+*.log
+*.pig
+*.tmp
+coverage/
