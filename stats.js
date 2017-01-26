@@ -1,4 +1,3 @@
-const config = require('cheevr-config');
 const moment = require('moment');
 
 
@@ -27,10 +26,15 @@ const moment = require('moment');
 
 
 class Stats {
-    constructor() {
-        let interval = Array.isArray(config.cache.stats.interval) ? config.cache.stats.interval : [config.cache.stats.interval];
+    /**
+     * @param {object} config
+     * @param {number} config.interval  The interval (floating window) for which metrics are kept in memory.
+     * @param {number} config.threshold The threshold after which individual keys will be included in the stat report
+     */
+    constructor(config) {
+        let interval = Array.isArray(config.interval) ? config.interval : [config.interval];
         this._interval = moment.duration(...interval).asMilliseconds();
-        this._threshold = config.cache.stats.threshold;
+        this._threshold = config.threshold;
         this._keys = {};
         this._hits = 0;
         this._misses = 0;

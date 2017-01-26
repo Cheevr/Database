@@ -1,0 +1,13 @@
+{
+  "name" : "Local Development",
+  "cluster_name" : "local",
+  "cluster_uuid" : "PzY_xoiPTsCZwoZ0n1tf1g",
+  "version" : {
+    "number" : "5.1.1",
+    "build_hash" : "5395e21",
+    "build_date" : "2016-12-06T12:36:15.409Z",
+    "build_snapshot" : false,
+    "lucene_version" : "6.3.0"
+  },
+  "tagline" : "You Know, for Search"
+}

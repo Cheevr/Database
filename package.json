@@ -1,6 +1,6 @@
 {
   "name": "cheevr-database",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A database utililty to facilitate accessing Elasticsearch",
   "private": true,
   "main": "index.js",
@@ -27,7 +27,8 @@
     "chai": "^3",
     "express": "^4",
     "istanbul": "^0.4",
-    "mocha": "^3"
+    "mocha": "^3",
+    "nock": "^9.0.2"
   },
   "dependencies": {
     "async": "^2",

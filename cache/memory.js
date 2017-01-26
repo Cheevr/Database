@@ -4,7 +4,7 @@ const moment = require('moment');
 
 class Memory {
     constructor(stats) {
-        let ttl = Array.isArray(config.cache.ttl) ? config.cache.ttl : [ config.cache.ttl ];
+        let ttl = Array.isArray(config.ttl) ? config.ttl : [ config.ttl ];
         this._ttl = moment.duration(...ttl).asMilliseconds();
         this._map = {};
         this._timeouts = {};
