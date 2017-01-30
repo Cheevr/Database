@@ -27,9 +27,10 @@ module.exports = {
             threshold: 10
         },
         /**
-         * Location (dir) from where to load additional mapping schemas, relative to the cwd of the server
+         * Location (dir) from where to load additional mapping schemas, relative to the cwd of the server, or a direct
+         * json object with the mapping for each index/type
          */
-        schemas: 'config/schemas',
+        indices: 'config/schemas',
         /**
          * Default mappings for indices
          */

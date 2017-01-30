@@ -239,9 +239,9 @@ class Database extends EventEmitter {
                 mappings = {};
                 if (fs.existsSync(dir)) {
                     let files = fs.readdirSync(dir);
-                    for (let name in files) {
-                        let file = files[name];
-                        mappings[name] = require(file);
+                    for (let file of files) {
+                        let basename = path.basename(file, path.extname(file));
+                        mappings[basename] = require(path.join(dir, file));
                     }
                 }
             }
