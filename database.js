@@ -49,19 +49,6 @@ class Database extends EventEmitter {
         }
     }
 
-    middleware() {
-        this.once('ready', () => {
-            async.forEachOfSeries(config.elasticsearch.mappings, (value, key, cb) => {
-                this.createMapping(key, value, cb)
-            });
-        });
-        return (req, res, next) => {
-            req.es = this.client;
-            req.es.ready = this.ready;
-            next();
-        }
-    }
-
     /**
      * Returns an ElasticSearch client that is wrapped by a caching object.
      * @returns {Proxy.<elasticsearch.Client>}

@@ -5,16 +5,13 @@ const expect = require('chai').expect;
 const nock = require('nock');
 const path = require('path');
 
+
 const db = require('..');
 
-
-
-describe('Database', () => {
+describe('index', () => {
     config.addDefaultConfig(path.join(__dirname, './configs'));
 
-    afterEach(() => {
-        db.reset();
-    });
+    afterEach(() => db.reset());
 
     describe('Factory', () => {
         it('should not create any instances on its own', () => {
