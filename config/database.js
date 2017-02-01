@@ -1,5 +1,6 @@
 module.exports = {
     _default_: {
+        logger: 'elasticsearch',
         /**
          * Elasticsearch.js client configuration
          */

@@ -8,6 +8,13 @@ const nock = require('nock');
 const Database = require('../database');
 
 describe('Database', () => {
+    Logger.elasticsearch = {
+        error: () => {},
+        warn: () => {},
+        info: () => {},
+        debug: () => {}
+    };
+
     function getSeries(index) {
         let date = new Date();
         let day = date.getDate();
@@ -28,6 +35,7 @@ describe('Database', () => {
             });
 
         return new Database(Object.assign({
+            logger: 'elasticsearch',
             client: {
                 host: 'localhost:9200'
             },
@@ -139,29 +147,29 @@ describe('Database', () => {
 
             let instance = getInstance({
                 indices: {
-                    testIndex: mapping
+                    seriesIndex: mapping
                 }
             });
 
             // Create Index requests
 
             nock('http://localhost:9200')
-                .head('/' + getSeries('testIndex'))
+                .head('/' + getSeries('seriesIndex'))
                 .reply(404);
 
             nock('http://localhost:9200')
-                .put('/' + getSeries('testIndex'), { mappings: mapping.mappings })
+                .put('/' + getSeries('seriesIndex'), { mappings: mapping.mappings })
                 .reply(200);
 
             // Index document request
 
             nock('http://localhost:9200')
-                .post('/' + getSeries('testIndex') + '/testType', { testProp: 'this is a test' })
+                .post('/' + getSeries('seriesIndex') + '/testType', { testProp: 'this is a test' })
                 .reply(200, () => done());
 
             instance.on('ready', () => {
                 instance.client.index({
-                    index: 'testIndex',
+                    index: 'seriesIndex',
                     type: 'testType',
                     body: {
                         testProp: 'this is a test'
