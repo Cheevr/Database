@@ -58,22 +58,58 @@ describe('Database', () => {
                 warn: () => {},
                 info: () => {},
                 debug: () => {},
-                trace: () => {}
+                trace: () => {done()}
             };
 
             let instance = getInstance({
                 logger: 'TestLogger'
             }, () => {
                 delete Logger.TestLogger;
-                done();
             });
             expect(instance._opts.client.log).to.be.an('object');
+            instance._log.trace('calling done');
         });
     });
 
     describe('_processBulk', () => {
         it('should create a series index if it doesn\'t exist yet and replace all bulk entry indices', done => {
-            done();
+
+            let instance = getInstance({
+                indices: {
+                    bulkSeries: {
+                        series: {
+                            retain: [ 30, 'd' ],
+                        },
+                        mappings: {
+                            testType: {
+                                properties: {
+                                    someProp: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            nock('http://localhost:9200')
+                .head('/' + getSeries('bulkSeries'))
+                .reply(200);
+
+            nock('http://localhost:9200')
+                .post('/_bulk', body => {
+                    expect(body).to.equal('{"index":{"_index":"' + getSeries('bulkSeries') + '","type":"testType"}}{"someProp":"testValue"}');
+                    return true;
+                })
+                .reply(200, () => done());
+
+            instance.on('ready', () => {
+                instance.client.bulk({
+                    body: [
+                        { index: { _index: 'bulkSeries', type: 'testType' }},
+                        { someProp: 'testValue' }
+                    ]
+                });
+            });
         });
     });
 
@@ -145,21 +181,21 @@ describe('Database', () => {
                 }
             };
 
+            // Create Index requests
+
+            nock('http://localhost:9200')
+            .head('/' + getSeries('seriesIndex'))
+            .reply(404);
+
+            nock('http://localhost:9200')
+            .put('/' + getSeries('seriesIndex'), { mappings: mapping.mappings })
+            .reply(200);
+
             let instance = getInstance({
                 indices: {
                     seriesIndex: mapping
                 }
             });
-
-            // Create Index requests
-
-            nock('http://localhost:9200')
-                .head('/' + getSeries('seriesIndex'))
-                .reply(404);
-
-            nock('http://localhost:9200')
-                .put('/' + getSeries('seriesIndex'), { mappings: mapping.mappings })
-                .reply(200);
 
             // Index document request
 

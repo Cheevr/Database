@@ -167,7 +167,7 @@ class Database extends EventEmitter {
      */
     _processBulk(payload, cb) {
         async.eachSeries(payload.body, (entry, cb) => {
-            if (!entry.index || !this._series[entry.index]) {
+            if (!entry.index || !this._series[entry.index._index]) {
                 return cb();
             }
             this._createIndex(entry.index._index, (err, seriesIndex) => {
