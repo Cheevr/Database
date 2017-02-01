@@ -13,13 +13,11 @@ const Stats = require('./stats');
 const cwd = process.cwd();
 config.addDefaultConfig(path.join(__dirname, 'config'));
 
-// TODO support multiple configs via hashmap
 // TODO series retain option needs to be respected => indices older than that need to be deleted
 class Database extends EventEmitter {
     /**
      *
      * @param {object} opts The ElasticSearch options object
-     * @param {string} dir  The file or directory with the mappings for all the indices
      */
     constructor(opts) {
         super();
@@ -30,6 +28,7 @@ class Database extends EventEmitter {
         this._client = new elasticsearch.Client(this._opts.client);
         this._stats = new Stats(this._opts.stats);
         this._cache = new (require('./cache/' + this._opts.cache.type))(this._stats);
+        this.on('ready', () => this._ready = true);
         // allow connection to be established
         setTimeout(this._createMappings.bind(this), 100);
     }
@@ -55,48 +54,72 @@ class Database extends EventEmitter {
      */
     get client() {
         let that = this;
+        let delOps = {
+            delete: true,
+            deleteByQuery: true,
+            deleteScript: true,
+            deleteTemplate: true
+        };
+        let addOps = {
+            create: true,
+            index: true,
+            update: true,
+            updateByQuery: true
+        };
+        let createIndexOp = {
+            bulk: true,
+            create: true,
+            index: true,
+            update: true,
+            updateByQuery: true
+        };
+        let queryOps = {
+            count: true,
+            countPercolate: true,
+            exists: true,
+            get: true,
+            getScript: true,
+            getSource: true,
+            getTemplate: true,
+            mget: true,
+            msearch: true,
+            msearchTemplate: true,
+            search: true,
+            searchShards: true,
+            searchTemplate: true,
+            suggest: true
+        };
+
         return new Proxy(this._client, {
             get(target, propKey) {
                 let original = target[propKey];
-                if (target[propKey]) {
-                    let delData = ['delete', 'deleteByQuery', 'update', 'updateByQuery'].reduce((status, entry) => {
-                        return status || entry == propKey;
-                    }, false);
-                    let addData = ['create', 'index', 'update', 'updateByQuery'].reduce((status, entry) => {
-                        return status || entry == propKey;
-                    }, false);
-                    let createIndex = addData || ['bulk'].reduce((status, entry) => {
-                            return status || entry == propKey;
-                        }, false);
-
-                    if (original.length == 2) {
-                        return (params, cb) => {
-                            let cache = params.cache;
-                            delete params.cache;
-                            that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
-                            that._fetch(cache, (err, result) => {
-                                if (err || result) {
-                                    return cb(err, result);
+                if (target[propKey] && original.length == 2) {
+                    return (params, cb = err => err && console.log(err)) => {
+                        let cache = queryOps[propKey] && params.cache;
+                        delete params.cache;
+                        that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
+                        that._fetch(cache, (err, result) => {
+                            if (err || result) {
+                                return cb(err, result);
+                            }
+                            that._processIndex(params, !createIndexOp[propKey], err => {
+                                if (err) {
+                                    return cb(err);
                                 }
-                                that._processIndex(params, !createIndex, err => {
+                                original.call(target, params, (err, results) => {
                                     if (err) {
-                                        return cb(err);
+                                        return cb(err, results);
                                     }
-                                    original.call(target, params, (err, results) => {
-                                        if (err) {
-                                            return cb(err, results);
-                                        }
-                                        if (delData) {
-                                            return that._remove(cache, cb);
-                                        }
-                                        that._store(cache, addData ? params.body : results, cb);
-                                    });
+                                    if (delOps[propKey]) {
+                                        return that._remove(cache, cb);
+                                    }
+                                    that._store(cache, addOps[propKey] ? params.body : results, cb);
                                 });
                             });
-                        };
-                    } else {
-                        return original;
-                    }
+                        });
+                    };
+                } else {
+                    return original;
                 }
             }
         });
@@ -199,7 +222,7 @@ class Database extends EventEmitter {
                 lastIndex: false
             };
             delete schema.series;
-            return;
+            return cb();
         }
         this._client.indices.exists({index}, (err, exists) => {
             if (exists || err) {
@@ -233,9 +256,7 @@ class Database extends EventEmitter {
                 }
             }
             if (!mappings || !Object.keys(mappings).length) {
-                this._ready = true;
-                this.emit('ready');
-                return;
+                return this.emit('ready');
             }
 
             // Apply default mappings from global config and create tasks to run them in parallel
@@ -254,7 +275,6 @@ class Database extends EventEmitter {
                 if (err) {
                     return console.log('There was an error setting the mapping for ElasticSearch', err);
                 }
-                this._ready = true;
                 this.emit('ready');
             });
         });

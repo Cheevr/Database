@@ -60,6 +60,7 @@ class Manager {
                 defaultName = name;
             }
         }
+        // TODO delay next() call until all dbs are ready
         return (req, res, next) => {
             // database object will always be the default instance
             req.db = this.factory(defaultName);

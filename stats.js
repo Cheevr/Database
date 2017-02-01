@@ -31,7 +31,7 @@ class Stats {
      * @param {number} config.interval  The interval (floating window) for which metrics are kept in memory.
      * @param {number} config.threshold The threshold after which individual keys will be included in the stat report
      */
-    constructor(config) {
+    constructor(config = {}) {
         let interval = Array.isArray(config.interval) ? config.interval : [config.interval];
         this._interval = moment.duration(...interval).asMilliseconds();
         this._threshold = config.threshold;
