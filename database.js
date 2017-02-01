@@ -167,11 +167,12 @@ class Database extends EventEmitter {
      */
     _processBulk(payload, cb) {
         async.eachSeries(payload.body, (entry, cb) => {
-            if (!entry.index || !this._series[entry.index._index]) {
+            let op = entry.index || entry.update || entry.delete;
+            if (!op || !this._series[op._index]) {
                 return cb();
             }
-            this._createIndex(entry.index._index, (err, seriesIndex) => {
-                entry.index._index = seriesIndex;
+            this._createIndex(op._index, (err, seriesIndex) => {
+                op._index = seriesIndex;
                 cb(err);
             });
         }, cb);
@@ -186,6 +187,10 @@ class Database extends EventEmitter {
      */
     _createIndex(index, cb) {
         let series = this._series[index];
+        if (!series) {
+            this._log.warn('Trying to get dynamic index name for non-series index:', index)
+            return cb(null, index);
+        }
         let date = new Date();
         let day = date.getDate();
         day = day > 9 ? day : '0' + day;

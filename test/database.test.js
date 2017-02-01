@@ -73,7 +73,6 @@ describe('Database', () => {
 
     describe('_processBulk', () => {
         it('should create a series index if it doesn\'t exist yet and replace all bulk entry indices', done => {
-
             let instance = getInstance({
                 indices: {
                     bulkSeries: {
@@ -97,7 +96,13 @@ describe('Database', () => {
 
             nock('http://localhost:9200')
                 .post('/_bulk', body => {
-                    expect(body).to.equal('{"index":{"_index":"' + getSeries('bulkSeries') + '","type":"testType"}}{"someProp":"testValue"}');
+                    expect(body).to.equal(
+                        '{"index":{"_index":"' + getSeries('bulkSeries') + '","type":"testType"}}' +
+                        '{"someProp":"indexValue"}' +
+                        '{"update":{"_index":"' + getSeries('bulkSeries') + '","type":"testType"}}' +
+                        '{"someProp":"updateValue"}' +
+                        '{"delete":{"_index":"' + getSeries('bulkSeries') + '","type":"testType"}}' +
+                        '{"someProp":"deleteValue"}');
                     return true;
                 })
                 .reply(200, () => done());
@@ -106,7 +111,12 @@ describe('Database', () => {
                 instance.client.bulk({
                     body: [
                         { index: { _index: 'bulkSeries', type: 'testType' }},
-                        { someProp: 'testValue' }
+                        { someProp: 'indexValue' },
+                        { update: { _index: 'bulkSeries', type: 'testType' }},
+                        { someProp: 'updateValue' },
+                        { delete: { _index: 'bulkSeries', type: 'testType' }},
+                        { someProp: 'deleteValue' }
+
                     ]
                 });
             });
@@ -115,11 +125,61 @@ describe('Database', () => {
 
     describe('_createIndex', () => {
         it('should create a series index', done => {
-            done();
+            let instance = getInstance({
+                indices: {
+                    test: {
+                        series: {
+                            retain: [ 30, 'd' ],
+                        },
+                        mappings: {
+                            testType: {
+                                properties: {
+                                    someProp: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            nock('http://localhost:9200')
+                .head('/' + getSeries('test'))
+                .reply(200);
+
+            instance.on('ready', () => {
+                instance._createIndex('test', (err, index) => {
+                    expect(index).to.equal(getSeries('test'));
+                    done();
+                });
+            });
         });
 
         it('should return the series index if it already exists and not create the index', done => {
-            done();
+            let instance = getInstance({
+                indices: {
+                    test: {
+                        series: {
+                            retain: [ 30, 'd' ],
+                        },
+                        mappings: {
+                            testType: {
+                                properties: {
+                                    someProp: { type: 'string' }
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            instance.on('ready', () => {
+                instance._series.test.lastIndex = getSeries('test');
+
+                instance._createIndex('test', (err, index) => {
+                    expect(index).to.equal(getSeries('test'));
+                    done();
+                });
+            });
         });
     });
 
@@ -184,12 +244,12 @@ describe('Database', () => {
             // Create Index requests
 
             nock('http://localhost:9200')
-            .head('/' + getSeries('seriesIndex'))
-            .reply(404);
+                .head('/' + getSeries('seriesIndex'))
+                .reply(404);
 
             nock('http://localhost:9200')
-            .put('/' + getSeries('seriesIndex'), { mappings: mapping.mappings })
-            .reply(200);
+                .put('/' + getSeries('seriesIndex'), { mappings: mapping.mappings })
+                .reply(200);
 
             let instance = getInstance({
                 indices: {
@@ -212,10 +272,6 @@ describe('Database', () => {
                     }
                 });
             });
-        });
-
-        it('should update index/update/bulk requests with the series index', done => {
-            done();
         });
     });
 });
