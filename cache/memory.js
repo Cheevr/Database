@@ -1,14 +1,12 @@
-const config = require('cheevr-config');
 const moment = require('moment');
 
 
 class Memory {
-    constructor(stats) {
+    constructor(config) {
         let ttl = Array.isArray(config.ttl) ? config.ttl : [ config.ttl ];
         this._ttl = moment.duration(...ttl).asMilliseconds();
         this._map = {};
         this._timeouts = {};
-        this._stats = stats;
     }
 
     /**
@@ -17,7 +15,6 @@ class Memory {
      * @param {function} cb
      */
     fetch(key, cb) {
-        this._map[key] ? this._stats.hit = key : this._stats.miss = key;
         cb(null, this._map[key]);
     }
 
@@ -48,15 +45,6 @@ class Memory {
         this._timeouts[key] && clearTimeout(this._timeouts[key]);
         delete this._timeouts[key];
         cb(null, value);
-    }
-
-    /**
-     * Returns a statistics objects that informs about hit, miss and refresh numbers.
-     * Calling a the stats will reset them
-     * @returns CacheStats
-     */
-    get stats() {
-        return this._stats.snapshot;
     }
 }
 

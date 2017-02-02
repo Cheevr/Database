@@ -183,20 +183,6 @@ describe('Database', () => {
         });
     });
 
-    describe('createMapping', () => {
-        it('should create a standard index if doesn\'t exist yet', done => {
-            done();
-        });
-
-        it('shouldn\'t create the index if it already exists', done => {
-            done();
-        });
-
-        it('should create a series entry for a series index', done => {
-            done();
-        });
-    });
-
     describe('_createMapping', () => {
         it('should create a normal index by default', done => {
             let mapping = {
@@ -272,6 +258,16 @@ describe('Database', () => {
                     }
                 });
             });
+        });
+    });
+
+    describe('Cache', () => {
+        it('should store and fetch a value from cache', () => {
+
+        });
+
+        it('should remove an item from cache after a given ttl', () => {
+
         });
     });
 });

@@ -27,7 +27,7 @@ class Database extends EventEmitter {
         this._setLogging();
         this._client = new elasticsearch.Client(this._opts.client);
         this._stats = new Stats(this._opts.stats);
-        this._cache = new (require('./cache/' + this._opts.cache.type))(this._stats);
+        this._cache = new (require('./cache/' + this._opts.cache.type))(this._opts.cache);
         this.on('ready', () => this._ready = true);
         // allow connection to be established
         setTimeout(this._createMappings.bind(this), 100);
@@ -297,7 +297,10 @@ class Database extends EventEmitter {
         if (!cache) {
             return cb();
         }
-        this._cache.fetch(cache, cb);
+        this._cache.fetch(cache, (err, result) => {
+            result !== undefined ? this._stats.hit = cache : this._stats.miss = cache;
+            cb(err, result);
+        });
     }
 
     _store(cache, data, cb) {

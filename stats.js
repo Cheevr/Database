@@ -41,8 +41,9 @@ class Stats {
     }
 
     /**
-     * Record a request for a key independent of whether cache is used or not
-     * @param key
+     * Record a request for a key independent of whether cache is used or not. This will be called automatically if you
+     * record a miss or a hit.
+     * @param {string} key
      */
     set request(key) {
         if (this._threshold) {
@@ -57,6 +58,7 @@ class Stats {
      * @param {string} key
      */
     set hit(key) {
+        this.request = key;
         this._hits++;
         setTimeout(() => this._hits--, this._interval);
         if (this._threshold) {
@@ -70,6 +72,7 @@ class Stats {
      * @param {string} key
      */
     set miss(key) {
+        this.request = key;
         this._misses++;
         setTimeout(() => this._misses--, this._interval);
         if (this._threshold) {
