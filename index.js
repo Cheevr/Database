@@ -1,10 +1,13 @@
 const config = require('cheevr-config');
 const Database = require('./database');
+const EventEmitter = require('events').EventEmitter;
 
 
-class Manager {
+class Manager extends EventEmitter {
     constructor() {
+        super();
         this._instances = {};
+        this._ready = 0;
     }
 
     /**
@@ -17,7 +20,13 @@ class Manager {
             throw new Error('Invalid database name ("_" prefix is reserved for internal functions)');
         }
         if (!this[name]) {
+            this.ready && this.emit('unavailable');
+            this._ready--;
             this._instances[name] = new Database(this._getConfig(name, config));
+            this._instances[name].on('ready', () =>  {
+                this._ready++;
+                this.ready && this.emit('ready');
+            });
             this[name] = this._instances[name].client;
         }
         return this[name];
@@ -45,6 +54,10 @@ class Manager {
             delete this[name];
             delete this._instances[name];
         }
+    }
+
+    get ready() {
+        return this._ready == 0;
     }
 
     /**

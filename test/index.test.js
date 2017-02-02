@@ -61,6 +61,17 @@ describe('index', () => {
             expect(inst).itself.to.respondTo('search');
             expect(inst.transport._config.host).to.equal('somehost:9200');
         });
+
+        it('should mark the manager as ready once all instances have reported ready', done => {
+            nock('http://localhost:9200')
+                .get('/_cluster/health')
+                .query(true)
+                .times(2)
+                .replyWithFile(200, __dirname + '/responses/cluster.health.json');
+            db.factory('notConfigured1');
+            db.factory('notConfigured2');
+            db.once('ready', done)
+        });
     });
 
     describe('Middleware', () => {
