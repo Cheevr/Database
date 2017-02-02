@@ -18,13 +18,16 @@ class Database extends EventEmitter {
     /**
      *
      * @param {object} opts The ElasticSearch options object
+     * @param {string} name The name of this instance in the config file
      */
-    constructor(opts) {
+    constructor(opts, name = '_default_') {
         super();
         this._opts = _.cloneDeep(opts);
+        this._name = name;
         this._ready = false;
         this._series = {};
         this._setLogging();
+        this._log.debug('%s: Attempting connection with host %s', this._name, this._opts.client.host);
         this._client = new elasticsearch.Client(this._opts.client);
         this._stats = new Stats(this._opts.stats);
         this._cache = new (require('./cache/' + this._opts.cache.type))(this._opts.cache);
@@ -46,7 +49,7 @@ class Database extends EventEmitter {
             }
             this._opts.client.log = LogToWinston;
         } else {
-            console.log('The configured database logger is missing:', this._opts.logger);
+            console.log('%s: The configured database logger is missing "%s"', this._name, this._opts.logger);
             this._log = {
                 error: console.error,
                 warn: console.warn,
@@ -188,7 +191,7 @@ class Database extends EventEmitter {
     _createIndex(index, cb) {
         let series = this._series[index];
         if (!series) {
-            this._log.warn('Trying to get dynamic index name for non-series index:', index)
+            this._log.warn('%s: Trying to get dynamic index name for non-series index "%s"', this._name, index);
             return cb(null, index);
         }
         let date = new Date();
@@ -241,7 +244,7 @@ class Database extends EventEmitter {
             if (exists || err) {
                 return cb(err);
             }
-            err || this._log.info('Creating new index', index);
+            err || this._log.info('%s: Creating new index "%s"', this._name, index);
             this._client.indices.create({index, body: schema}, cb);
         });
     }
@@ -252,7 +255,7 @@ class Database extends EventEmitter {
             waitForEvents: 'normal'
         }, err => {
             if (err) {
-                return this._log.error('Unable to connect to ElasticSearch cluster', err);
+                return this._log.error('%s: Unable to connect to ElasticSearch cluster', this._name, err);
             }
 
             // Read all mappings either from config or from file
@@ -286,7 +289,7 @@ class Database extends EventEmitter {
             // Execute the queued up tasks
             async.parallel(tasks, err => {
                 if (err) {
-                    return this._log.error('There was an error setting the mapping for ElasticSearch', err);
+                    return this._log.error('%s: There was an error setting the mapping for ElasticSearch', this._namem, err);
                 }
                 this.emit('ready');
             });

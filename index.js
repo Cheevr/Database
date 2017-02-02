@@ -22,7 +22,7 @@ class Manager extends EventEmitter {
         if (!this[name]) {
             this.ready && this.emit('unavailable');
             this._ready--;
-            this._instances[name] = new Database(this._getConfig(name, config));
+            this._instances[name] = new Database(this._getConfig(name, config), name);
             this._instances[name].on('ready', () =>  {
                 this._ready++;
                 this.ready && this.emit('ready');
