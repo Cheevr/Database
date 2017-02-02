@@ -73,15 +73,16 @@ class Manager extends EventEmitter {
                 defaultName = name;
             }
         }
+        // database object will always be the default instance
+        let db = this.factory(defaultName);
+        for (let name in config.database) {
+            if (config.database.hasOwnProperty(name) && name != '_default_') {
+                db[name] = this.factory(name);
+            }
+        }
         // TODO delay next() call until all dbs are ready
         return (req, res, next) => {
-            // database object will always be the default instance
-            req.db = this.factory(defaultName);
-            for (let name in config.database) {
-                if (config.database.hasOwnProperty(name) && name != '_default_') {
-                    req.db[name] = this.factory(name);
-                }
-            }
+            req.db = db;
             next();
         }
     }

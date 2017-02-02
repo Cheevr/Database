@@ -31,7 +31,10 @@ class Database extends EventEmitter {
         this._client = new elasticsearch.Client(this._opts.client);
         this._stats = new Stats(this._opts.stats);
         this._cache = new (require('./cache/' + this._opts.cache.type))(this._opts.cache);
-        this.on('ready', () => this._ready = true);
+        this.on('ready', () => {
+            this._log.debug('%s: Connection Ready', this._name);
+            this._ready = true;
+        });
         // allow connection to be established
         setTimeout(this._createMappings.bind(this), 100);
     }
@@ -255,7 +258,7 @@ class Database extends EventEmitter {
             waitForEvents: 'normal'
         }, err => {
             if (err) {
-                return this._log.error('%s: Unable to connect to ElasticSearch cluster', this._name, err);
+                return this._log.error('%s: Unable to connect to ElasticSearch cluster\n%s', this._name, err);
             }
 
             // Read all mappings either from config or from file
@@ -289,7 +292,7 @@ class Database extends EventEmitter {
             // Execute the queued up tasks
             async.parallel(tasks, err => {
                 if (err) {
-                    return this._log.error('%s: There was an error setting the mapping for ElasticSearch', this._namem, err);
+                    return this._log.error('%s: There was an error setting the mapping for ElasticSearch\n%s', this._name, err);
                 }
                 this.emit('ready');
             });
