@@ -33,6 +33,18 @@ class Manager extends EventEmitter {
     }
 
     /**
+     * Returns a map with all the known clients.
+     * @returns {Object<String, Object>}
+     */
+    list() {
+        let clients = {};
+        for (let name in this._instances) {
+            clients[name] = this[name];
+        }
+        return clients;
+    }
+
+    /**
      * Returns the configuration for a named database client.
      * @param {string} name
      * @param {object} overrideConfig

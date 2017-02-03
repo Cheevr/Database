@@ -45,7 +45,7 @@ describe('index', () => {
                 });
             let a = db.factory('unique');
             let b = db.factory('unique');
-            expect(a).to.be.equal(b);
+            expect(a).to.equal(b);
         });
 
         it('should use the custom configuration from file', done => {
@@ -71,6 +71,20 @@ describe('index', () => {
             db.factory('notConfigured1');
             db.factory('notConfigured2');
             db.once('ready', done)
+        });
+
+        it('should list all known instances', () => {
+            nock('http://localhost:9200')
+            .get('/_cluster/health')
+            .query(true)
+            .times(2)
+            .replyWithFile(200, __dirname + '/responses/cluster.health.json');
+            let inst1 = db.factory('notConfigured1');
+            let inst2 = db.factory('notConfigured2');
+            let list = db.list();
+            expect(Object.keys(list).length).to.equal(2);
+            expect(list.notConfigured1).to.equal(inst1);
+            expect(list.notConfigured2).to.equal(inst2);
         });
     });
 

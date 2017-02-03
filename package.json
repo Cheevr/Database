@@ -1,6 +1,6 @@
 {
   "name": "cheevr-database",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A database utililty to facilitate accessing Elasticsearch",
   "private": true,
   "main": "index.js",
