@@ -40,6 +40,61 @@ describe('Database', () => {
                 miss: 1,
                 request: 1
             }]
-        })
+        });
+    });
+
+    it('should not include keys below the threshold', () => {
+        let stats = new Stats({
+            interval: [ 1, 'm'],
+            threshold: 3
+        });
+
+        stats.hit = 'key1';
+        stats.hit = 'key1';
+        stats.hit = 'key1';
+        stats.miss = 'key2';
+        stats.miss = 'key2';
+
+        expect(stats.snapshot).to.deep.equal({
+            total: 5,
+            hit: {
+                count: 3,
+                ratio: 0.6
+            },
+            miss: {
+                count: 2,
+                ratio: 0.4
+            },
+            keys: [ {
+                hit: 3,
+                key: 'key1',
+                miss: 0,
+                request: 3
+            }]
+        });
+    });
+
+    it('should remove stats after the interval has expired', done => {
+        let stats = new Stats({
+            interval: [ 100, 'ms'],
+            threshold: 10
+        });
+
+        stats.hit = 'key1';
+
+        expect(stats.snapshot).to.deep.equal({
+            total: 1,
+            hit: {
+                count: 1,
+                ratio: 1            },
+            miss: {
+                count: 0,
+                ratio: 0
+            }
+        });
+        setTimeout(() => {
+            expect(stats.snapshot).to.be.null;
+            done();
+        }, 150);
     });
 });

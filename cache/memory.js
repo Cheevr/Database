@@ -27,7 +27,7 @@ class Memory {
     store(key, data, cb) {
         this._map[key] = data;
         this._timeouts[key] && clearTimeout(this._timeouts[key]);
-        this._timeouts[key] = setTimeout(key => {
+        this._timeouts[key] = setTimeout(() => {
             delete this._map[key];
             delete this._timeouts[key];
         }, this._ttl);
