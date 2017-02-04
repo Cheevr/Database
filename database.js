@@ -1,6 +1,5 @@
 const _ = require('lodash');
 const async = require('async');
-const config = require('cheevr-config');
 const elasticsearch = require('elasticsearch');
 const EventEmitter = require('events').EventEmitter;
 const fs = require('fs');
@@ -11,7 +10,6 @@ const Stats = require('./stats');
 
 
 const cwd = process.cwd();
-config.addDefaultConfig(path.join(__dirname, 'config'));
 
 // TODO series retain option needs to be respected => indices older than that need to be deleted
 class Database extends EventEmitter {

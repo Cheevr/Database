@@ -1,4 +1,6 @@
 const config = require('cheevr-config');
+const path = require('path');
+config.addDefaultConfig(path.join(__dirname, 'config'));
 const Database = require('./database');
 const EventEmitter = require('events').EventEmitter;
 
@@ -22,12 +24,14 @@ class Manager extends EventEmitter {
         if (!this[name]) {
             this.ready && this.emit('unavailable');
             this._ready--;
-            this._instances[name] = new Database(this._getConfig(name, config), name);
+            let configWithDefaults = this._getConfig(name, config);
+            this._instances[name] = new Database(configWithDefaults, name);
             this._instances[name].on('ready', () =>  {
                 this._ready++;
                 this.ready && this.emit('ready');
             });
             this[name] = this._instances[name].client;
+            this[name].config = configWithDefaults;
         }
         return this[name];
     }

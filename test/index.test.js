@@ -33,6 +33,7 @@ describe('index', () => {
             let inst = db.factory('notConfigured');
             expect(inst).itself.to.respondTo('search');
             expect(inst.transport._config.host).to.equal('localhost:9200');
+            expect(inst.config.client.host).to.equal('localhost:9200');
         });
 
         it('should return the same instance for the same name', done => {
