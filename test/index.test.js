@@ -33,7 +33,6 @@ describe('index', () => {
             let inst = db.factory('notConfigured');
             expect(inst).itself.to.respondTo('search');
             expect(inst.transport._config.host).to.equal('localhost:9200');
-            expect(inst.config.client.host).to.equal('localhost:9200');
         });
 
         it('should return the same instance for the same name', done => {
@@ -84,8 +83,8 @@ describe('index', () => {
             let inst2 = db.factory('notConfigured2');
             let list = db.list();
             expect(Object.keys(list).length).to.equal(2);
-            expect(list.notConfigured1).to.equal(inst1);
-            expect(list.notConfigured2).to.equal(inst2);
+            expect(list.notConfigured1.client).to.equal(inst1);
+            expect(list.notConfigured2.client).to.equal(inst2);
         });
     });
 

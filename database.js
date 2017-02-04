@@ -60,11 +60,18 @@ class Database extends EventEmitter {
         }
     }
 
+    get config() {
+        return this._opts;
+    }
+
     /**
      * Returns an ElasticSearch client that is wrapped by a caching object.
      * @returns {Proxy.<elasticsearch.Client>}
      */
     get client() {
+        if (this._proxy) {
+            return this._proxy;
+        }
         let that = this;
         let delOps = {
             delete: true,
@@ -102,7 +109,7 @@ class Database extends EventEmitter {
             suggest: true
         };
 
-        return new Proxy(this._client, {
+        return this._proxy = new Proxy(this._client, {
             get(target, propKey) {
                 let original = target[propKey];
                 if (target[propKey] && original.length == 2) {

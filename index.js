@@ -31,19 +31,18 @@ class Manager extends EventEmitter {
                 this.ready && this.emit('ready');
             });
             this[name] = this._instances[name].client;
-            this[name].config = configWithDefaults;
         }
         return this[name];
     }
 
     /**
-     * Returns a map with all the known clients.
+     * Returns a map with all the known database instances.
      * @returns {Object<String, Object>}
      */
     list() {
         let clients = {};
         for (let name in this._instances) {
-            clients[name] = this[name];
+            clients[name] = this._instances[name];
         }
         return clients;
     }
