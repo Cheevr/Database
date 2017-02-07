@@ -27,7 +27,7 @@ class Database extends EventEmitter {
         this._setLogging();
         this._log.debug('%s: Attempting connection with host %s', this._name, this._opts.client.host);
         this._client = new elasticsearch.Client(this._opts.client);
-        this._stats = new Stats(this._opts.stats, name);
+        this._stats = new Stats(this._opts.stats);
         this._cache = new (require('./cache/' + this._opts.cache.type))(this._opts.cache);
         this.on('ready', () => {
             this._log.debug('%s: Connection Ready', this._name);
