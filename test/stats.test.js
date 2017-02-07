@@ -15,6 +15,7 @@ describe('Database', () => {
         stats.miss = 'key3';
 
         expect(stats.snapshot).to.deep.equal({
+            source: '_default_',
             total: 2,
             hit: {
                 count: 1,
@@ -56,6 +57,7 @@ describe('Database', () => {
         stats.miss = 'key2';
 
         expect(stats.snapshot).to.deep.equal({
+            source: '_default_',
             total: 5,
             hit: {
                 count: 3,
@@ -83,6 +85,7 @@ describe('Database', () => {
         stats.hit = 'key1';
 
         expect(stats.snapshot).to.deep.equal({
+            source: '_default_',
             total: 1,
             hit: {
                 count: 1,

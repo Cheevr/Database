@@ -30,10 +30,12 @@ class Stats {
      * @param {object} config
      * @param {number} config.interval  The interval (floating window) for which metrics are kept in memory.
      * @param {number} config.threshold The threshold after which individual keys will be included in the stat report
+     * @param {string} name             The name of the database we're collecting stats for
      */
-    constructor(config = {}) {
+    constructor(config = {}, name = '_default_') {
         let interval = Array.isArray(config.interval) ? config.interval : [config.interval];
         this._interval = moment.duration(...interval).asMilliseconds();
+        this._name = name;
         this._threshold = config.threshold;
         this._keys = {};
         this._hits = 0;
@@ -92,6 +94,7 @@ class Stats {
             return null;
         }
         let stats = {
+            source: this._name,
             total,
             hit: {
                 count: this._hits,
