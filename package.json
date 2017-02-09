@@ -20,11 +20,12 @@
     "url": "https://github.com/Cheevr/Database/issues"
   },
   "scripts": {
-    "start": "type node-dev 2> /dev/null && node-dev . || node .",
-    "test": "istanbul cover _mocha -- --recursive"
+    "test": "istanbul cover _mocha -- --recursive",
+    "test-travis": "istanbul cover _mocha --report lcovonly -- -R spec --recursive"
   },
   "devDependencies": {
     "chai": "^3",
+    "coveralls": "^2",
     "express": "^4",
     "istanbul": "^0.4",
     "mocha": "^3",
