@@ -164,7 +164,7 @@ class Database extends EventEmitter {
         if (!this._series[payload.index]) {
             return cb();
         }
-        this._createIndex(payload.index, (err, seriesIndex) => {
+        this._createIndex(payload.index, payload.body, (err, seriesIndex) => {
             payload.index = seriesIndex || payload.index;
             cb(err);
         });
@@ -182,7 +182,7 @@ class Database extends EventEmitter {
             if (!op || !this._series[op._index]) {
                 return cb();
             }
-            this._createIndex(op._index, (err, seriesIndex) => {
+            this._createIndex(op._index, entry, (err, seriesIndex) => {
                 op._index = seriesIndex;
                 cb(err);
             });
@@ -196,13 +196,13 @@ class Database extends EventEmitter {
      * @param {function} cb
      * @private
      */
-    _createIndex(index, cb) {
+    _createIndex(index, entry, cb) {
         let series = this._series[index];
         if (!series) {
             this._log.warn('%s: Trying to get dynamic index name for non-series index "%s"', this._name, index);
             return cb(null, index);
         }
-        let date = new Date();
+        let date = Database._getDateFromEntry(entry);
         let day = date.getDate();
         day = day > 9 ? day : '0' + day;
         let month = date.getMonth() + 1;
@@ -214,6 +214,38 @@ class Database extends EventEmitter {
             return this.createMapping(seriesIndex, series.schema, err => cb(err, seriesIndex));
         }
         cb(null, seriesIndex);
+    }
+
+    static _getDateFromEntry(entry) {
+        if (!entry) {
+            return new Date();
+        }
+        for (let field of ['timestamp', '@timestamp', 'time', 'date']) {
+            let value = entry[field];
+            if (value) {
+                if (value instanceof Date) {
+                    return value;
+                }
+                // Assuming timestamp should not be in the 70's
+                console.log(field, value, !isNaN(value))
+                if (!isNaN(value) && value > 100000000) {
+                    // not millisecond precision
+                    if (value < 100000000000) {
+                        value *= 1000;
+                    }
+                    return new Date(value);
+                }
+                // Date Strings have a minimum length
+                if (value instanceof String && value.length > 18) {
+                    let response = new Date(value);
+                    // Only valid dates are finite
+                    if (isFinite(response)) {
+                        return response;
+                    }
+                }
+            }
+        }
+        return new Date();
     }
 
     /**

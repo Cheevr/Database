@@ -123,6 +123,48 @@ describe('Database', () => {
         });
     });
 
+    describe('_getDateFromEntry', () => {
+        const now = new Date();
+
+        it('should create a default date if the entry is null', () => {
+            let result = Database._getDateFromEntry(null);
+            expect(result.getTime()).to.be.at.least(now.getTime());
+        });
+
+        it('should use existing date objects', () => {
+            let result = Database._getDateFromEntry({ date: now });
+            expect(result.getTime()).to.be.at.least(now.getTime());
+        });
+
+        it('should convert timestamp to date objects', () => {
+            let timestamp = 1300000000000;
+            let result = Database._getDateFromEntry({ timestamp });
+            expect(result.getTime()).to.equal(timestamp);
+        });
+
+        it('should ignore timestamps that are too small', () => {
+            let timestamp = 13000000;
+            let result = Database._getDateFromEntry({ timestamp });
+            expect(result.getTime()).to.be.at.least(now.getTime());
+        });
+
+        it('should automatically detect ms vs s precision in timestamps', () => {
+            let timestamp = 130000000;
+            let result = Database._getDateFromEntry({ timestamp });
+            expect(result.getTime()).to.be.at.least(timestamp * 1000);
+        });
+
+        it('should convert valid strings to date objects', () => {
+            let timestamp = '2011-03-13T07:06:40.000';
+            let result = Database._getDateFromEntry({ '@timestamp': timestamp });
+            expect(result.getTime()).to.be.at.least(1300000000000);
+        });
+
+        it('should ignore invalid strings and return the current date', () => {
+
+        });
+    });
+
     describe('_createIndex', () => {
         it('should create a series index', done => {
             let instance = getInstance({
@@ -147,7 +189,7 @@ describe('Database', () => {
                 .reply(200);
 
             instance.on('ready', () => {
-                instance._createIndex('test', (err, index) => {
+                instance._createIndex('test', null, (err, index) => {
                     expect(index).to.equal(getSeries('test'));
                     done();
                 });
@@ -175,7 +217,7 @@ describe('Database', () => {
             instance.on('ready', () => {
                 instance._series.test.lastIndex = getSeries('test');
 
-                instance._createIndex('test', (err, index) => {
+                instance._createIndex('test', null, (err, index) => {
                     expect(index).to.equal(getSeries('test'));
                     done();
                 });
