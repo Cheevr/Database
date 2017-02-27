@@ -306,8 +306,11 @@ class Database extends EventEmitter {
                 if (fs.existsSync(dir)) {
                     let files = fs.readdirSync(dir);
                     for (let file of files) {
-                        let basename = path.basename(file, path.extname(file));
-                        mappings[basename] = require(path.join(dir, file));
+                        let fullPath = path.join(dir, file);
+                        if (fs.statSync(fullPath).isFile()) {
+                            let basename = path.basename(file, path.extname(file));
+                            mappings[basename] = require(fullPath);
+                        }
                     }
                 }
             }
