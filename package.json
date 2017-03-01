@@ -1,6 +1,6 @@
 {
   "name": "cheevr-database",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "A database utililty to facilitate accessing Elasticsearch",
   "private": true,
   "main": "index.js",
@@ -19,6 +19,9 @@
   "bugs": {
     "url": "https://github.com/Cheevr/Database/issues"
   },
+  "engines" : {
+    "node" : ">=7.6.0"
+  },
   "scripts": {
     "test": "istanbul cover _mocha -- --recursive",
     "test-travis": "istanbul cover _mocha --report lcovonly -- -R spec --recursive"
@@ -32,10 +35,10 @@
     "nock": "^9.0.2"
   },
   "dependencies": {
-    "async": "^2",
     "cheevr-config": "https://github.com/Cheevr/Config.git",
     "cheevr-logging": "https://github.com/Cheevr/Logging.git",
     "elasticsearch": "^12",
+    "lodash.clonedeep": "^4",
     "moment": "^2"
   }
 }

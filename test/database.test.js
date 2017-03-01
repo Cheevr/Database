@@ -188,11 +188,10 @@ describe('Database', () => {
                 .head('/' + getSeries('test'))
                 .reply(200);
 
-            instance.on('ready', () => {
-                instance._createIndex('test', null, (err, index) => {
-                    expect(index).to.equal(getSeries('test'));
-                    done();
-                });
+            instance.on('ready', async () => {
+                let index = await instance._createIndex('test', null);
+                expect(index).to.equal(getSeries('test'));
+                done();
             });
         });
 
@@ -214,13 +213,12 @@ describe('Database', () => {
                 }
             });
 
-            instance.on('ready', () => {
+            instance.on('ready', async () => {
                 instance._series.test.lastIndex = getSeries('test');
 
-                instance._createIndex('test', null, (err, index) => {
-                    expect(index).to.equal(getSeries('test'));
-                    done();
-                });
+                let index = await instance._createIndex('test', null);
+                expect(index).to.equal(getSeries('test'));
+                done();
             });
         });
     });

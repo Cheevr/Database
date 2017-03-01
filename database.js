@@ -1,5 +1,4 @@
-const _ = require('lodash');
-const async = require('async');
+const cloneDeep = require('lodash.cloneDeep');
 const elasticsearch = require('elasticsearch');
 const EventEmitter = require('events').EventEmitter;
 const fs = require('fs');
@@ -20,7 +19,7 @@ class Database extends EventEmitter {
      */
     constructor(opts, name = '_default_') {
         super();
-        this._opts = _.cloneDeep(opts);
+        this._opts = cloneDeep(opts);
         this._name = name;
         this._ready = false;
         this._series = {};
@@ -117,11 +116,11 @@ class Database extends EventEmitter {
                         let cache = queryOps[propKey] && params.cache;
                         delete params.cache;
                         that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
-                        that._fetch(cache, (err, result) => {
+                        that._fetch(cache, async (err, result) => {
                             if (err || result) {
                                 return cb(err, result);
                             }
-                            that._processIndex(params, !createIndexOp[propKey], err => {
+                            await that._processIndex(params, !createIndexOp[propKey], err => {
                                 if (err) {
                                     return cb(err);
                                 }
@@ -152,7 +151,7 @@ class Database extends EventEmitter {
      * @param {function} cb
      * @private
      */
-    _processIndex(payload, skip, cb) {
+    async _processIndex(payload, skip, cb) {
         if (skip) {
             return cb();
         }
@@ -164,10 +163,8 @@ class Database extends EventEmitter {
         if (!this._series[payload.index]) {
             return cb();
         }
-        this._createIndex(payload.index, payload.body, (err, seriesIndex) => {
-            payload.index = seriesIndex || payload.index;
-            cb(err);
-        });
+        payload.index = await this._createIndex(payload.index, payload.body);
+        cb();
     }
 
     /**
@@ -176,31 +173,30 @@ class Database extends EventEmitter {
      * @param {function} cb
      * @private
      */
-    _processBulk(payload, cb) {
-        async.eachSeries(payload.body, (entry, cb) => {
+    async _processBulk(payload, cb) {
+        for (let prop in payload.body) {
+            let entry = payload.body[prop];
             let op = entry.index || entry.update || entry.delete;
             if (!op || !this._series[op._index]) {
-                return cb();
+                continue;
             }
-            this._createIndex(op._index, entry, (err, seriesIndex) => {
-                op._index = seriesIndex;
-                cb(err);
-            });
-        }, cb);
+            op._index = await this._createIndex(op._index, entry);
+        }
+        cb();
     }
 
     /**
      * Will return the series index and create it if necessary.
      * @todo try to make this smarter so we don't generate a date object on every insert
      * @param {string} index    The index prefix without date (e.g. logstash)
-     * @param {function} cb
+     * @param {object} entry
      * @private
      */
-    _createIndex(index, entry, cb) {
+    async _createIndex(index, entry) {
         let series = this._series[index];
         if (!series) {
             this._log.warn('%s: Trying to get dynamic index name for non-series index "%s"', this._name, index);
-            return cb(null, index);
+            return index;
         }
         let date = Database._getDateFromEntry(entry);
         let day = date.getDate();
@@ -211,9 +207,13 @@ class Database extends EventEmitter {
         let seriesIndex = `${index}-${year}.${month}.${day}`;
         if (seriesIndex != series.lastIndex) {
             series.lastIndex = seriesIndex;
-            return this.createMapping(seriesIndex, series.schema, err => cb(err, seriesIndex));
+            try {
+                await this.createMapping(seriesIndex, series.schema);
+            } catch (err) {
+                this._log.error('%s: There was an error trying to create the series mapping for index', this._name, seriesIndex);
+            }
         }
-        cb(null, seriesIndex);
+        return seriesIndex;
     }
 
     static _getDateFromEntry(entry) {
@@ -268,9 +268,9 @@ class Database extends EventEmitter {
      * Creates the mapping and index if they don't already exist.
      * @param index
      * @param schema
-     * @param cb
      */
-    createMapping(index, schema, cb) {
+
+    async createMapping(index, schema) {
         if (schema.series) {
             this._series[index] = {
                 retain: moment.duration(...schema.series.retain),
@@ -278,25 +278,26 @@ class Database extends EventEmitter {
                 lastIndex: false
             };
             delete schema.series;
-            return cb();
+            return index;
         }
-        this._client.indices.exists({index}, (err, exists) => {
-            if (exists || err) {
-                return cb(err);
+        try {
+            let exists = await this._client.indices.exists({index});
+            if (!exists) {
+                this._log.info('%s: Creating new index "%s"', this._name, index);
+                return this._client.indices.create({index, body: schema});
             }
-            err || this._log.info('%s: Creating new index "%s"', this._name, index);
-            this._client.indices.create({index, body: schema}, cb);
-        });
+        } catch (err) {
+            this._log.error('%s: There was an error when checking whether an index already exists:', this._name, index);
+        }
+        return index;
     }
 
-    _createMappings() {
-        this._client.cluster.health({
-            waitForStatus: 'yellow',
-            waitForEvents: 'normal'
-        }, err => {
-            if (err) {
-                return this._log.error('%s: Unable to connect to ElasticSearch cluster\n%s', this._name, err);
-            }
+    async _createMappings() {
+        try {
+            await this._client.cluster.health({
+                waitForStatus: 'yellow',
+                waitForEvents: 'normal'
+            });
 
             // Read all mappings either from config or from file
             let mappings = this._opts.indices;
@@ -326,17 +327,15 @@ class Database extends EventEmitter {
             let tasks = [];
             for (let index in mappings) {
                 let indexConfig = Object.assign({}, defaults, mappings[index]);
-                tasks.push(cb => this.createMapping(index, indexConfig, cb));
+                tasks.push(this.createMapping(index, indexConfig));
             }
 
             // Execute the queued up tasks
-            async.parallel(tasks, err => {
-                if (err) {
-                    return this._log.error('%s: There was an error setting the mapping for ElasticSearch\n%s', this._name, err);
-                }
-                this.emit('ready');
-            });
-        });
+            await Promise.all(tasks);
+            this.emit('ready');
+        } catch (err) {
+            this._log.error('%s: There was an error setting the mapping for ElasticSearch\n%s', this._name, err)
+        }
     }
 
     _fetch(cache, cb) {
