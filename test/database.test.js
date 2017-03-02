@@ -326,7 +326,7 @@ describe('Database', () => {
             });
         });
 
-        it.skip('should store a value in the database using promises', done => {
+        it('should store a value in the database using promises', done => {
             let response = nock('http://localhost:9200', {"encodedQueryParams":true})
                 .post('/TestIndex/TestType/1', {"prop":"This is a test"})
                 .replyWithFile(201, __dirname + '/responses/put.json');
@@ -376,7 +376,7 @@ describe('Database', () => {
             });
         });
 
-        it.skip('should fetch a value from the database using promises', done => {
+        it('should fetch a value from the database using promises', done => {
             nock('http://localhost:9200', {"encodedQueryParams":true})
                 .get('/TestIndex/TestType/3')
                 .reply(200, {

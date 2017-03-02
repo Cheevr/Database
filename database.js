@@ -12,7 +12,6 @@ const cwd = process.cwd();
 
 // TODO series retain option needs to be respected => indices older than that need to be deleted
 // TODO Caching doesn't work right now
-// TODO can't use promise API right now
 class Database extends EventEmitter {
     /**
      *
@@ -115,31 +114,40 @@ class Database extends EventEmitter {
                 let original = target[propKey];
                 if (target[propKey] && original.length == 2) {
                     return (params, cb = err => err && that._log.error(err)) => {
-                        let cache = params.cache;
-                        delete params.cache;
-                        if (cache && typeof cache == 'boolean') {
-                            cache = params.index + ':' + params.type + ':' + params.id;
-                        }
-                        that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
-                        that._fetch(cache, async (err, result) => {
-                            if (err || result) {
-                                return cb(err, result);
+                        return new Promise((resolve, reject) => {
+                            let cache = params.cache;
+                            delete params.cache;
+                            if (cache && typeof cache == 'boolean') {
+                                cache = params.index + ':' + params.type + ':' + params.id;
                             }
-                            if (createIndexOp[propKey]) {
-                                try {
-                                    await that._processIndex(params);
-                                } catch (err) {
-                                    return cb(err);
+                            that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
+                            that._fetch(cache, async (err, result) => {
+                                if (err || result) {
+                                    return cb(err, result);
                                 }
-                            }
-                            original.call(target, params, (err, results, status) => {
-                                if (err) {
-                                    return cb(err, results, status);
+                                if (createIndexOp[propKey]) {
+                                    try {
+                                        await that._processIndex(params);
+                                    } catch (err) {
+                                        return cb(err);
+                                    }
                                 }
-                                if (delOps[propKey]) {
-                                    return that._remove(cache, cb);
-                                }
-                                that._store(cache, addOps[propKey] ? params.body : results, cb);
+                                original.call(target, params, (err, results, status) => {
+                                    if (err) {
+                                        reject(err, results, status);
+                                        return cb(err, results, status);
+                                    }
+                                    if (delOps[propKey]) {
+                                        return that._remove(cache, () => {
+                                            resolve(results, status);
+                                            cb(null, results);
+                                        });
+                                    }
+                                    that._store(cache, addOps[propKey] ? params.body : results, () => {
+                                        resolve(results, status);
+                                        cb(null, results, status);
+                                    });
+                                });
                             });
                         });
                     };
@@ -367,7 +375,7 @@ class Database extends EventEmitter {
     }
 
     clearCache() {
-        this._cache.clear();
+        this._cache.clear && this._cache.clear();
         return this;
     }
 }
