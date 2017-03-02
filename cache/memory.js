@@ -46,6 +46,17 @@ class Memory {
         delete this._timeouts[key];
         cb(null, value);
     }
+
+    /**
+     * Clears all stored cache entries from memory.
+     */
+    clear() {
+        this._map = {};
+        for (let prop in this._timeouts) {
+            clearTimeout(this._timeouts[prop])
+        }
+        this._timeouts = {};
+    }
 }
 
 module.exports = Memory;

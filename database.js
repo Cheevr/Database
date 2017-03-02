@@ -11,6 +11,8 @@ const Stats = require('./stats');
 const cwd = process.cwd();
 
 // TODO series retain option needs to be respected => indices older than that need to be deleted
+// TODO Caching doesn't work right now
+// TODO can't use promise API right now
 class Database extends EventEmitter {
     /**
      *
@@ -33,7 +35,7 @@ class Database extends EventEmitter {
             this._ready = true;
         });
         // allow connection to be established
-        setTimeout(this._createMappings.bind(this), 100);
+        setTimeout(this._readMappingsFromDisk.bind(this), 100);
     }
 
     _setLogging() {
@@ -113,26 +115,31 @@ class Database extends EventEmitter {
                 let original = target[propKey];
                 if (target[propKey] && original.length == 2) {
                     return (params, cb = err => err && that._log.error(err)) => {
-                        let cache = queryOps[propKey] && params.cache;
+                        let cache = params.cache;
                         delete params.cache;
+                        if (cache && typeof cache == 'boolean') {
+                            cache = params.index + ':' + params.type + ':' + params.id;
+                        }
                         that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
                         that._fetch(cache, async (err, result) => {
                             if (err || result) {
                                 return cb(err, result);
                             }
-                            await that._processIndex(params, !createIndexOp[propKey], err => {
-                                if (err) {
+                            if (createIndexOp[propKey]) {
+                                try {
+                                    await that._processIndex(params);
+                                } catch (err) {
                                     return cb(err);
                                 }
-                                original.call(target, params, (err, results) => {
-                                    if (err) {
-                                        return cb(err, results);
-                                    }
-                                    if (delOps[propKey]) {
-                                        return that._remove(cache, cb);
-                                    }
-                                    that._store(cache, addOps[propKey] ? params.body : results, cb);
-                                });
+                            }
+                            original.call(target, params, (err, results, status) => {
+                                if (err) {
+                                    return cb(err, results, status);
+                                }
+                                if (delOps[propKey]) {
+                                    return that._remove(cache, cb);
+                                }
+                                that._store(cache, addOps[propKey] ? params.body : results, cb);
                             });
                         });
                     };
@@ -147,33 +154,25 @@ class Database extends EventEmitter {
      * Looks up whether this is a payload for a series index and replaced the index names if so. Will also create any
      * missing indices before request.
      * @param {object} payload  The options object passed on to ElasticSearch
-     * @param {boolean} skip    Whether to just skip this step
-     * @param {function} cb
      * @private
      */
-    async _processIndex(payload, skip, cb) {
-        if (skip) {
-            return cb();
-        }
+    async _processIndex(payload) {
         // Deal with bulk requests
         if (!payload.index && Array.isArray(payload.body)) {
-            return this._processBulk(payload, cb);
+            return this._processBulk(payload);
         }
         // Ignore non series indices
-        if (!this._series[payload.index]) {
-            return cb();
+        if (this._series[payload.index]) {
+            payload.index = await this._createIndex(payload.index, payload.body);
         }
-        payload.index = await this._createIndex(payload.index, payload.body);
-        cb();
     }
 
     /**
      * Handles bulk requests when lookg for series indices.
      * @param {object} payload
-     * @param {function} cb
      * @private
      */
-    async _processBulk(payload, cb) {
+    async _processBulk(payload) {
         for (let prop in payload.body) {
             let entry = payload.body[prop];
             let op = entry.index || entry.update || entry.delete;
@@ -182,7 +181,6 @@ class Database extends EventEmitter {
             }
             op._index = await this._createIndex(op._index, entry);
         }
-        cb();
     }
 
     /**
@@ -216,6 +214,14 @@ class Database extends EventEmitter {
         return seriesIndex;
     }
 
+    /**
+     * Searches a given object for a number of date properties and uses that to createa a date object. Supports using
+     * timestamp, standard time strings and date objects. If no date is found this method will return the current date
+     * instead.
+     * @param {object} [entry]
+     * @returns {Date}
+     * @private
+     */
     static _getDateFromEntry(entry) {
         if (!entry) {
             return new Date();
@@ -227,7 +233,6 @@ class Database extends EventEmitter {
                     return value;
                 }
                 // Assuming timestamp should not be in the 70's
-                console.log(field, value, !isNaN(value))
                 if (!isNaN(value) && value > 100000000) {
                     // not millisecond precision
                     if (value < 100000000000) {
@@ -269,7 +274,6 @@ class Database extends EventEmitter {
      * @param index
      * @param schema
      */
-
     async createMapping(index, schema) {
         if (schema.series) {
             this._series[index] = {
@@ -292,7 +296,7 @@ class Database extends EventEmitter {
         return index;
     }
 
-    async _createMappings() {
+    async _readMappingsFromDisk() {
         try {
             await this._client.cluster.health({
                 waitForStatus: 'yellow',
@@ -344,7 +348,7 @@ class Database extends EventEmitter {
         }
         this._cache.fetch(cache, (err, result) => {
             result !== undefined ? this._stats.hit = cache : this._stats.miss = cache;
-            cb(err, result);
+            cb(err, { _source: result });
         });
     }
 
@@ -360,6 +364,11 @@ class Database extends EventEmitter {
             return cb();
         }
         this._cache.remove(cache, data, cb);
+    }
+
+    clearCache() {
+        this._cache.clear();
+        return this;
     }
 }
 

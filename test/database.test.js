@@ -1,9 +1,12 @@
 /* globals describe, it, after, afterEach, before, beforeEach */
-const config = require('cheevr-config');
 const expect = require('chai').expect;
 const Logger = require('cheevr-logging');
 const nock = require('nock');
 
+
+process.on('unhandledRejection', function (err) {
+    throw err;
+});
 
 const Database = require('../database');
 
@@ -25,12 +28,12 @@ describe('Database', () => {
         return `${index}-${year}.${month}.${day}`;
     }
 
-    function getInstance(config = {}, done) {
-        nock('http://localhost:9200')
+    function getInstance(config = {}, done = config) {
+        nock('http://localhost:9200', {"encodedQueryParams":true})
             .get('/_cluster/health')
-            .query(true)
+            .query({"wait_for_status":"yellow","wait_for_events":"normal"})
             .reply(200, () => {
-                done && process.nextTick(done);
+                typeof done =='function' && process.nextTick(done);
                 return require(__dirname + '/responses/cluster.health.json');
             });
 
@@ -42,7 +45,7 @@ describe('Database', () => {
             cache: {
                 type: 'memory'
             }
-        }, config));
+        }, config)).clearCache();
     }
 
     describe('Constructor', () => {
@@ -301,13 +304,188 @@ describe('Database', () => {
         });
     });
 
-    describe('Cache', () => {
-        it('should store and fetch a value from cache', () => {
+    describe('store', () => {
+        it('should store a value in the database using callbacks', done => {
 
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+                .post('/TestIndex/TestType/1', {"prop":"This is a test"})
+                .replyWithFile(201, __dirname + '/responses/put.json');
+
+            let instance = getInstance({}, () => {
+                instance.client.index({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 1,
+                    body: {
+                        prop: 'This is a test'
+                    }
+                }, err => {
+                    expect(err).to.be.not.ok;
+                    done();
+                });
+            });
         });
 
-        it('should remove an item from cache after a given ttl', () => {
+        it.skip('should store a value in the database using promises', done => {
+            let response = nock('http://localhost:9200', {"encodedQueryParams":true})
+                .post('/TestIndex/TestType/1', {"prop":"This is a test"})
+                .replyWithFile(201, __dirname + '/responses/put.json');
 
+            let instance = getInstance({}, async () => {
+                await instance.client.index({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 1,
+                    body: {
+                        prop: 'This is a test'
+                    }
+                });
+                response.done();
+                done();
+            });
+        });
+    });
+
+    describe('query', () => {
+        it('should fetch a value from the database using callbacks', done => {
+            nock('http://localhost:9200', { 'encodedQueryParams': true })
+                .get('/TestIndex/TestType/2')
+                .reply(200, {
+                    _index: 'TestIndex',
+                    _type: 'TestType',
+                    _id: 2,
+                    _version: 1,
+                    found: true,
+                    _source:{
+                        prop: "This is a test"
+                    }
+                });
+
+            let instance = getInstance(() => {
+                instance.client.get({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 2
+                }, (err, result) => {
+                    expect(err).to.be.not.ok;
+                    expect(result._source).to.deep.equal({
+                        prop: 'This is a test'
+                    });
+                    done();
+                });
+            });
+        });
+
+        it.skip('should fetch a value from the database using promises', done => {
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+                .get('/TestIndex/TestType/3')
+                .reply(200, {
+                    _index: 'TestIndex',
+                    _type: 'TestType',
+                    _id: 3,
+                    _version: 1,
+                    found: true,
+                    _source:{
+                        prop: "This is a test"
+                    }
+                });
+
+            let instance = getInstance({}, async () => {
+                let result = await instance.client.get({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 3
+                });
+                expect(result._source).to.deep.equal({
+                    prop: 'This is a test'
+                });
+                done();
+            });
+        });
+    });
+
+    describe.skip('Cache', () => {
+        it('should store and fetch a value from cache', done => {
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+                .post('/TestIndex/TestType/5', {"prop":"This is a test"})
+                .replyWithFile(201, __dirname + '/responses/put.json');
+
+            let instance = getInstance({}, () => {
+                instance.client.index({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 5,
+                    cache: true,
+                    body: {
+                        prop: 'This is a test'
+                    }
+                }, err => {
+                    expect(err).to.be.not.ok;
+                    instance.client.get({
+                        index: 'TestIndex',
+                        type: 'TestType',
+                        cache: true,
+                        id: 5
+                    }, (err, response) => {
+                        expect(err).to.be.not.ok;
+                        expect(response._source).to.deep.equal({
+                            prop: 'This is a test'
+                        });
+                        done();
+                    });
+                });
+            });
+        });
+
+        it('should remove an item from cache after a given ttl', done => {
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+                .post('/TestIndex/TestType/6', {"prop":"This is a test"})
+                .replyWithFile(201, __dirname + '/responses/put.json');
+
+            let mock = nock('http://localhost:9200', {"encodedQueryParams":true})
+                .get('/TestIndex/TestType/6')
+                .reply(200, {
+                    _index: 'TestIndex',
+                    _type: 'TestType',
+                    _id: 6,
+                    _version: 1,
+                    found: true,
+                    _source:{
+                        prop: "This is a test"
+                    }
+                });
+
+            let instance = getInstance({
+                cache: {
+                    ttl: 100
+                }
+            }, () => {
+                instance.client.index({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 6,
+                    cache: true,
+                    body: {
+                        prop: 'This is a test'
+                    }
+                }, err => {
+                    expect(err).to.be.not.ok;
+                    setTimeout(() => {
+                        instance.client.get({
+                            index: 'TestIndex',
+                            type: 'TestType',
+                            id: 6
+                        }, (err, response) => {
+                            expect(err).to.be.not.ok;
+                            expect(response._source).to.deep.equal({
+                                prop: 'This is a test'
+                            });
+                            mock.done();
+                            done();
+                        });
+                    }, 150);
+                });
+            });
         });
     });
 });
