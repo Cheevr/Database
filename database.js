@@ -1,4 +1,4 @@
-const cloneDeep = require('lodash.cloneDeep');
+const _ = require('lodash');
 const elasticsearch = require('elasticsearch');
 const EventEmitter = require('events').EventEmitter;
 const fs = require('fs');
@@ -21,7 +21,7 @@ class Database extends EventEmitter {
      */
     constructor(opts, name = '_default_') {
         super();
-        this._opts = cloneDeep(opts);
+        this._opts = _.cloneDeep(opts);
         this._name = name;
         this._ready = false;
         this._series = {};

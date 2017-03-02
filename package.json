@@ -38,7 +38,7 @@
     "cheevr-config": "https://github.com/Cheevr/Config.git",
     "cheevr-logging": "https://github.com/Cheevr/Logging.git",
     "elasticsearch": "^12",
-    "lodash.clonedeep": "^4",
+    "lodash": "^4",
     "moment": "^2"
   }
 }
