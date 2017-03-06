@@ -122,8 +122,13 @@ class Database extends EventEmitter {
                             }
                             that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
                             that._fetch(cache, async (err, result) => {
-                                if (err || result) {
-                                    return cb(err, result);
+                                if (err) {
+                                    reject(err);
+                                    return cb(err);
+                                }
+                                if (result) {
+                                    resolve(result);
+                                    cb(null, result);
                                 }
                                 if (createIndexOp[propKey]) {
                                     try {
@@ -143,7 +148,7 @@ class Database extends EventEmitter {
                                             cb(null, results);
                                         });
                                     }
-                                    that._store(cache, addOps[propKey] ? params.body : results, () => {
+                                    that._store(cache, addOps[propKey] ? params : results, () => {
                                         resolve(results, status);
                                         cb(null, results, status);
                                     });
@@ -350,28 +355,59 @@ class Database extends EventEmitter {
         }
     }
 
-    _fetch(cache, cb) {
-        if (!cache) {
+    /**
+     * Retrieve data from cache using the given key
+     * @param {string} key  The key used to lookup the data in cache
+     * @param {function} cb The callback function to call when completed
+     * @returns {*}
+     * @private
+     */
+    _fetch(key, cb) {
+        if (!key) {
             return cb();
         }
-        this._cache.fetch(cache, (err, result) => {
-            result !== undefined ? this._stats.hit = cache : this._stats.miss = cache;
-            cb(err, { _source: result });
+        this._cache.fetch(key, (err, result) => {
+            result !== undefined ? this._stats.hit = key : this._stats.miss = key;
+            cb(err, result);
         });
     }
 
-    _store(cache, data, cb) {
-        if (!cache) {
+    /**
+     * Will store the results of a request in the cache implementation
+     * @param {string} key  The key under which to store the data
+     * @param {object} data The response form the database
+     * @param {function} cb The callback function to call when completed
+     * @returns {*}
+     * @private
+     */
+    _store(key, data, cb) {
+        if (!key) {
             return cb(null, data);
         }
-        this._cache.store(cache, data, cb);
+        if (data.id) {
+            // convert to response format
+            data = {
+                _index: data.index,
+                _type: data.type,
+                _id: data.id,
+                _source: data.body
+            }
+        }
+        this._cache.store(key, data, cb);
     }
 
-    _remove(cache, cb) {
-        if (!cache) {
+    /**
+     * Removes an entry from cache.
+     * @param {string} key  The key used to lookup teh data
+     * @param {function} cb The function to call when the operation completed
+     * @returns {*}
+     * @private
+     */
+    _remove(key, cb) {
+        if (!key) {
             return cb();
         }
-        this._cache.remove(cache, data, cb);
+        this._cache.remove(key, cb);
     }
 
     clearCache() {

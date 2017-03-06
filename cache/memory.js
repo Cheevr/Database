@@ -10,19 +10,20 @@ class Memory {
     }
 
     /**
-     * Returns the key if it exists in this cache.
+     * Returns the key and updates the ttl if it exists in this cache.
      * @param {string} key
      * @param {function} cb
      */
     fetch(key, cb) {
         cb(null, this._map[key]);
+        this._map[key] && this.store(key, this._map[key])
     }
 
     /**
      * Stores data in this cache.
      * @param {string} key
      * @param {object} data
-     * @param {function} cb
+     * @param {function} [cb]
      */
     store(key, data, cb) {
         this._map[key] = data;
@@ -31,7 +32,7 @@ class Memory {
             delete this._map[key];
             delete this._timeouts[key];
         }, this._ttl);
-        cb(null, data);
+        cb && cb(null, data);
     }
 
     /**

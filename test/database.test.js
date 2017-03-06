@@ -404,13 +404,14 @@ describe('Database', () => {
         });
     });
 
-    describe.skip('Cache', () => {
+    describe('Cache', () => {
         it('should store and fetch a value from cache', done => {
             nock('http://localhost:9200', {"encodedQueryParams":true})
                 .post('/TestIndex/TestType/5', {"prop":"This is a test"})
                 .replyWithFile(201, __dirname + '/responses/put.json');
 
             let instance = getInstance({}, () => {
+                instance.clearCache()
                 instance.client.index({
                     index: 'TestIndex',
                     type: 'TestType',
@@ -437,6 +438,39 @@ describe('Database', () => {
             });
         });
 
+        it('should store and fetch a value with a custom key from cache', done => {
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+            .post('/TestIndex/TestType/5', {"prop":"This is a test"})
+            .replyWithFile(201, __dirname + '/responses/put.json');
+
+            let instance = getInstance({}, () => {
+                instance.clearCache()
+                instance.client.index({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 5,
+                    cache: 'customKey',
+                    body: {
+                        prop: 'This is a test'
+                    }
+                }, err => {
+                    expect(err).to.be.not.ok;
+                    instance.client.get({
+                        index: 'OtherIndex',
+                        type: 'OtherType',
+                        cache: 'customKey',
+                        id: 500
+                    }, (err, response) => {
+                        expect(err).to.be.not.ok;
+                        expect(response._source).to.deep.equal({
+                            prop: 'This is a test'
+                        });
+                        done();
+                    });
+                });
+            });
+        });
+
         it('should remove an item from cache after a given ttl', done => {
             nock('http://localhost:9200', {"encodedQueryParams":true})
                 .post('/TestIndex/TestType/6', {"prop":"This is a test"})
@@ -451,15 +485,15 @@ describe('Database', () => {
                     _version: 1,
                     found: true,
                     _source:{
-                        prop: "This is a test"
+                        prop: 'This is a test'
                     }
                 });
 
-            let instance = getInstance({
-                cache: {
-                    ttl: 100
-                }
+            let instance = getInstance({ cache: {
+                type: 'memory',
+                ttl: 100 }
             }, () => {
+                instance.clearCache();
                 instance.client.index({
                     index: 'TestIndex',
                     type: 'TestType',
@@ -485,6 +519,43 @@ describe('Database', () => {
                         });
                     }, 150);
                 });
+            });
+        });
+
+        it('should cache a query request even without being stored', done => {
+            nock('http://localhost:9200', {"encodedQueryParams":true})
+                .get('/TestIndex/TestType/3')
+                .reply(200, {
+                    _index: 'TestIndex',
+                    _type: 'TestType',
+                    _id: 3,
+                    _version: 1,
+                    found: true,
+                    _source:{
+                        prop: "This is a test"
+                    }
+                });
+
+            let instance = getInstance({}, async () => {
+                let result1 = await instance.client.get({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 3,
+                    cache: true
+                });
+                expect(result1._source).to.deep.equal({
+                    prop: 'This is a test'
+                });
+                let result2 = await instance.client.get({
+                    index: 'TestIndex',
+                    type: 'TestType',
+                    id: 3,
+                    cache: true
+                });
+                expect(result2._source).to.deep.equal({
+                    prop: 'This is a test'
+                });
+                done();
             });
         });
     });
