@@ -1,4 +1,5 @@
 const _ = require('lodash');
+const config = require('cheevr-config');
 const elasticsearch = require('elasticsearch');
 const EventEmitter = require('events').EventEmitter;
 const fs = require('fs');
@@ -11,16 +12,16 @@ const Stats = require('./stats');
 const cwd = process.cwd();
 
 // TODO series retain option needs to be respected => indices older than that need to be deleted
-// TODO Caching doesn't work right now
+// TODO Make a mock version available for testing
 class Database extends EventEmitter {
     /**
      *
      * @param {object} opts The ElasticSearch options object
      * @param {string} name The name of this instance in the config file
      */
-    constructor(opts, name = '_default_') {
+    constructor(opts, name) {
         super();
-        this._opts = _.cloneDeep(opts);
+        this._opts = _.defaultsDeep({}, opts, config.defaults.database.instance);
         this._name = name;
         this._ready = false;
         this._series = {};

@@ -1,3 +1,4 @@
+const _ = require('lodash');
 const config = require('cheevr-config').addDefaultConfig(__dirname, 'config');
 const Database = require('./database');
 const EventEmitter = require('events').EventEmitter;
@@ -12,18 +13,19 @@ class Manager extends EventEmitter {
 
     /**
      * Returns the database with the given name and performs all set up operations if necessary.
-     * @param {string} [name]   Get the names database instance (or return the default database if empty)
-     * @param {object} [config] Override the database configuration (or use the default/named config from files)
+     * @param {string} [name]           Get the names database instance (or return the default database if empty)
+     * @param {object} [instanceConfig] Override the database configuration (or use the default/named config from files)
+     *                                  If there's a config for a database with this name, the configurations will be
+     *                                  merged
      */
-    factory(name = '_default_', config) {
+    factory(name = '_default_', instanceConfig) {
         if (name.startsWith('_') && name != '_default_') {
             throw new Error('Invalid database name ("_" prefix is reserved for internal functions)');
         }
         if (!this[name]) {
             this.ready && this.emit('unavailable');
             this._ready--;
-            let configWithDefaults = this._getConfig(name, config);
-            this._instances[name] = new Database(configWithDefaults, name);
+            this._instances[name] = new Database(_.defaultsDeep({}, instanceConfig, config.database[name]), name);
             this._instances[name].on('ready', () =>  {
                 this._ready++;
                 this.ready && this.emit('ready');
@@ -43,19 +45,6 @@ class Manager extends EventEmitter {
             clients[name] = this._instances[name];
         }
         return clients;
-    }
-
-    /**
-     * Returns the configuration for a named database client.
-     * @param {string} name
-     * @param {object} overrideConfig
-     * @returns {object}
-     * @private
-     */
-    _getConfig(name = '_default_', overrideConfig = {}) {
-        let defaultConfig = config.database._default_;
-        let namedConfig = config.database[name] || {};
-        return Object.assign({}, defaultConfig, namedConfig, overrideConfig);
     }
 
     /**
@@ -82,7 +71,7 @@ class Manager extends EventEmitter {
     middleware() {
         let defaultName;
         for (let name in config.database) {
-            if (name != '_default_' && (!defaultName || config.database[name].default)) {
+            if (!defaultName || config.database[name].default) {
                 defaultName = name;
             }
         }

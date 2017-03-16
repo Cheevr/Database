@@ -1,9 +1,12 @@
+const _ = require('lodash');
+const config = require('cheevr-config');
 const moment = require('moment');
 
 
 class Memory {
-    constructor(config) {
-        let ttl = Array.isArray(config.ttl) ? config.ttl : [ config.ttl ];
+    constructor(cacheConfig) {
+        _.defaultsDeep(cacheConfig, config.defaults.database.cache.memory);
+        let ttl = Array.isArray(cacheConfig.ttl) ? cacheConfig.ttl : [ cacheConfig.ttl ];
         this._ttl = moment.duration(...ttl).asMilliseconds();
         this._map = {};
         this._timeouts = {};
