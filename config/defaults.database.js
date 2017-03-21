@@ -17,11 +17,7 @@ module.exports = {
         /**
          * Cashing driver and config
          */
-        cache: {
-            type: 'memory',
-            max: '1000',
-            ttl: [ 1, 'h' ]
-        },
+        cache: 'databaseDefault',
         /**
          * Caching (and possibly other future) stats
          */

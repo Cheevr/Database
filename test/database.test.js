@@ -459,7 +459,7 @@ describe('Database', () => {
                         index: 'OtherIndex',
                         type: 'OtherType',
                         cache: 'customKey',
-                        id: 500
+                        id: 5
                     }, (err, response) => {
                         expect(err).to.be.not.ok;
                         expect(response._source).to.deep.equal({

@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const config = require('cheevr-config');
+const Cache = require('cheevr-cache');
 const elasticsearch = require('elasticsearch');
 const EventEmitter = require('events').EventEmitter;
 const fs = require('fs');
@@ -29,7 +30,7 @@ class Database extends EventEmitter {
         this._log.debug('%s: Attempting connection with host %s', this._name, this._opts.client.host);
         this._client = new elasticsearch.Client(this._opts.client);
         this._stats = new Stats(this._opts.stats);
-        this._cache = new (require('./cache/' + this._opts.cache.type))(this._opts.cache);
+        this._cache = Cache.instance(opts.cache);
         this.on('ready', () => {
             this._log.debug('%s: Connection Ready', this._name);
             this._ready = true;
@@ -113,16 +114,16 @@ class Database extends EventEmitter {
         return this._proxy = new Proxy(this._client, {
             get(target, propKey) {
                 let original = target[propKey];
-                if (target[propKey] && original.length == 2) {
+                if (target[propKey] && original.length === 2) {
                     return (params, cb = err => err && that._log.error(err)) => {
                         return new Promise((resolve, reject) => {
                             let cache = params.cache;
                             delete params.cache;
-                            if (cache && typeof cache == 'boolean') {
-                                cache = params.index + ':' + params.type + ':' + params.id;
+                            if (cache && typeof cache === 'boolean') {
+                                cache = params.index + ':' + params.type;
                             }
                             that._stats.request = cache ? cache : params.index + ':' + params.type + ':' + params.key;
-                            that._fetch(cache, async (err, result) => {
+                            that._fetch(cache, params.id, async (err, result) => {
                                 if (err) {
                                     reject(err);
                                     return cb(err);
@@ -144,12 +145,12 @@ class Database extends EventEmitter {
                                         return cb(err, results, status);
                                     }
                                     if (delOps[propKey]) {
-                                        return that._remove(cache, () => {
+                                        return that._remove(cache, params.id, () => {
                                             resolve(results, status);
                                             cb(null, results);
                                         });
                                     }
-                                    that._store(cache, addOps[propKey] ? params : results, () => {
+                                    that._store(cache, params.id, addOps[propKey] ? params : results, () => {
                                         resolve(results, status);
                                         cb(null, results, status);
                                     });
@@ -214,10 +215,10 @@ class Database extends EventEmitter {
         let day = date.getDate();
         day = day > 9 ? day : '0' + day;
         let month = date.getMonth() + 1;
-        month = month.length == 2 ? month : '0' + month;
+        month = month.length === 2 ? month : '0' + month;
         let year = date.getFullYear();
         let seriesIndex = `${index}-${year}.${month}.${day}`;
-        if (seriesIndex != series.lastIndex) {
+        if (seriesIndex !== series.lastIndex) {
             series.lastIndex = seriesIndex;
             try {
                 await this.createMapping(seriesIndex, series.schema);
@@ -319,7 +320,7 @@ class Database extends EventEmitter {
 
             // Read all mappings either from config or from file
             let mappings = this._opts.indices;
-            if (typeof mappings == 'string') {
+            if (typeof mappings === 'string') {
                 let dir = path.isAbsolute(mappings) ? mappings : path.join(cwd, mappings);
                 mappings = {};
                 if (fs.existsSync(dir)) {
@@ -363,11 +364,11 @@ class Database extends EventEmitter {
      * @returns {*}
      * @private
      */
-    _fetch(key, cb) {
+    _fetch(key, id, cb) {
         if (!key) {
             return cb();
         }
-        this._cache.fetch(key, (err, result) => {
+        this._cache.fetch(key, id, (err, result) => {
             result !== undefined ? this._stats.hit = key : this._stats.miss = key;
             cb(err, result);
         });
@@ -381,7 +382,7 @@ class Database extends EventEmitter {
      * @returns {*}
      * @private
      */
-    _store(key, data, cb) {
+    _store(key, id,  data, cb) {
         if (!key) {
             return cb(null, data);
         }
@@ -394,7 +395,7 @@ class Database extends EventEmitter {
                 _source: data.body
             }
         }
-        this._cache.store(key, data, cb);
+        this._cache.store(key, id, data, cb);
     }
 
     /**
@@ -404,11 +405,11 @@ class Database extends EventEmitter {
      * @returns {*}
      * @private
      */
-    _remove(key, cb) {
+    _remove(key, id, cb) {
         if (!key) {
             return cb();
         }
-        this._cache.remove(key, cb);
+        this._cache.remove(key, id, cb);
     }
 
     clearCache() {
@@ -418,4 +419,3 @@ class Database extends EventEmitter {
 }
 
 module.exports = Database;
-

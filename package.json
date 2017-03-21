@@ -1,6 +1,6 @@
 {
   "name": "cheevr-database",
-  "version": "1.1.9",
+  "version": "1.1.10",
   "description": "A database utililty to facilitate accessing Elasticsearch",
   "private": true,
   "main": "index.js",
@@ -35,6 +35,7 @@
     "nock": "^9.0.2"
   },
   "dependencies": {
+    "cheevr-cache": "https://github.com/Cheevr/Cache.git",
     "cheevr-config": "https://github.com/Cheevr/Config.git",
     "cheevr-logging": "https://github.com/Cheevr/Logging.git",
     "elasticsearch": "^12",
