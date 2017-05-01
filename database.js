@@ -11,6 +11,41 @@ const Stats = require('./stats');
 
 
 const cwd = process.cwd();
+const delOps = {
+    delete: true,
+    deleteByQuery: true,
+    deleteScript: true,
+    deleteTemplate: true
+};
+const addOps = {
+    create: true,
+    index: true,
+    update: true,
+    updateByQuery: true
+};
+const createOps = {
+    bulk: true,
+    create: true,
+    index: true,
+    update: true,
+    updateByQuery: true
+};
+const queryOps = {
+    count: true,
+    countPercolate: true,
+    exists: true,
+    get: true,
+    getScript: true,
+    getSource: true,
+    getTemplate: true,
+    mget: true,
+    msearch: true,
+    msearchTemplate: true,
+    search: true,
+    searchShards: true,
+    searchTemplate: true,
+    suggest: true
+};
 
 // TODO series retain option needs to be respected => indices older than that need to be deleted
 // TODO Make a mock version available for testing
@@ -75,41 +110,6 @@ class Database extends EventEmitter {
             return this._proxy;
         }
         let that = this;
-        let delOps = {
-            delete: true,
-            deleteByQuery: true,
-            deleteScript: true,
-            deleteTemplate: true
-        };
-        let addOps = {
-            create: true,
-            index: true,
-            update: true,
-            updateByQuery: true
-        };
-        let createIndexOp = {
-            bulk: true,
-            create: true,
-            index: true,
-            update: true,
-            updateByQuery: true
-        };
-        let queryOps = {
-            count: true,
-            countPercolate: true,
-            exists: true,
-            get: true,
-            getScript: true,
-            getSource: true,
-            getTemplate: true,
-            mget: true,
-            msearch: true,
-            msearchTemplate: true,
-            search: true,
-            searchShards: true,
-            searchTemplate: true,
-            suggest: true
-        };
 
         return this._proxy = new Proxy(this._client, {
             get(target, propKey) {
@@ -132,10 +132,11 @@ class Database extends EventEmitter {
                                     resolve(result);
                                     cb(null, result);
                                 }
-                                if (createIndexOp[propKey]) {
+                                if (createOps[propKey]) {
                                     try {
                                         await that._processIndex(params);
                                     } catch (err) {
+                                        reject(err);
                                         return cb(err);
                                     }
                                 }
