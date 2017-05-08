@@ -1,6 +1,6 @@
 /* globals describe, it, after, afterEach, before, beforeEach */
 const async = require('async');
-const config = require('cheevr-config');
+const config = require('@cheevr/config');
 const expect = require('chai').expect;
 const nock = require('nock');
 const path = require('path');

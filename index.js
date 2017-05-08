@@ -1,5 +1,5 @@
 const _ = require('lodash');
-const config = require('cheevr-config').addDefaultConfig(__dirname, 'config');
+const config = require('@cheevr/config').addDefaultConfig(__dirname, 'config');
 const Database = require('./database');
 const EventEmitter = require('events').EventEmitter;
 
