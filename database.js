@@ -75,6 +75,7 @@ class Database extends EventEmitter {
     }
 
     _setLogging() {
+        // TODO database logs don't have any information about which instance they belong to. messages should probably be wrapped.
         let log = this._log = Logger[this._opts.logger];
         if (log) {
             function LogToWinston() {
