@@ -5,3 +5,4 @@ logs/
 .travis.yml
 .gitignore
 .nyc_output/
+.npmignore
