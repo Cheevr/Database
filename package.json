@@ -1,6 +1,6 @@
 {
   "name": "@cheevr/database",
-  "version": "1.1.11",
+  "version": "1.1.12",
   "description": "A database utililty to facilitate accessing Elasticsearch",
   "main": "index.js",
   "repository": {
@@ -18,20 +18,20 @@
   "bugs": {
     "url": "https://github.com/Cheevr/Database/issues"
   },
-  "engines" : {
-    "node" : ">=7.6.0"
+  "engines": {
+    "node": ">=8.0.0"
   },
   "scripts": {
-    "test": "istanbul cover _mocha -- --recursive",
-    "test-travis": "istanbul cover _mocha --report lcovonly -- -R spec --recursive"
+    "test": "nyc --reporter=text --reporter=html mocha --recursive",
+    "test-travis": "nyc --reporter=text-lcov mocha --recursive | coveralls"
   },
   "devDependencies": {
-    "chai": "^3",
+    "chai": "^4",
     "coveralls": "^2",
     "express": "^4",
-    "istanbul": "^0.4",
     "mocha": "^3",
-    "nock": "^9.0.2"
+    "nock": "^9",
+    "nyc": "^11"
   },
   "dependencies": {
     "@cheevr/cache": "^1",
