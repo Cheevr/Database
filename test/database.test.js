@@ -110,6 +110,7 @@ describe('Database', () => {
                 })
                 .reply(200, () => done());
 
+
             instance.on('ready', () => {
                 instance.client.bulk({
                     body: [
